@@ -1,1 +1,1 @@
-SeekIT
+SeekIT - A python project.
