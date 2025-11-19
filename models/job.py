@@ -1,4 +1,3 @@
-from unittest import result
 from database.db_manager import DatabaseManager
 
 class Job:
@@ -20,7 +19,7 @@ class Job:
         """Save or update job"""
         with DatabaseManager.get_cursor() as cursor:
             if self.job_id:
-                query = """UPDATE jobs SET client_id=%s, title=%s, descriptio=%s, required_skills=%s, budget_min=%s, budget_max=%s, daedline=%s, status=%s WHERE job_id=%s"""
+                query = """UPDATE jobs SET client_id=%s, title=%s, description=%s, required_skills=%s, budget_min=%s, budget_max=%s, daedline=%s, status=%s WHERE job_id=%s"""
                 cursor.execute(query,(self.client_id,self.title,self.description,self.required_skills,self.budget_min,self.budget_max,self.deadline,self.status,self.job_id))
             else:
                 query = """INSERT INTO jobs (client_id,title,description,required_skills,budget_min,budget_max,deadline,status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
