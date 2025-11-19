@@ -3,6 +3,7 @@
 from typing import Optional
 
 from features.auth import list_users_flow, login_user_flow, register_user_flow
+from features.job_posting import job_posting_menu
 from models.user import User
 from utils.display import (
     ask_input,
@@ -31,6 +32,8 @@ def main() -> None:
         print(" 2. Log in to existing account")
         print(" 3. List registered users")
         print(" 4. Log out")
+        if current_user and current_user.user_type == "client":
+            print(" 5. Job posting tools")
         print(" 0. Exit")
         divider()
 
@@ -58,6 +61,19 @@ def main() -> None:
                 current_user = None
             else:
                 print_info("No user is logged in.")
+        elif choice == "5":
+            if not current_user:
+                print_info("Log in as a client to use job tools.")
+            elif current_user.user_type != "client":
+                print_info("Only client accounts can post or review jobs.")
+            else:
+                job_posting_menu(
+                    {
+                        "user_id": current_user.user_id,
+                        "name": current_user.name,
+                        "user_type": current_user.user_type,
+                    }
+                )
         else:
             print_info("Unknown option. Please try again.")
 

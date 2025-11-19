@@ -1,5 +1,7 @@
 """Small helper functions for printing friendly CLI messages."""
 
+from typing import Iterable, Tuple
+
 def divider(char: str = "-", width: int = 50) -> str:
     """Return a line divider so menus look tidy."""
     line = char * max(10, width)
@@ -41,3 +43,18 @@ def ask_input(prompt: str, allow_empty: bool = False) -> str:
         if response or allow_empty:
             return response
         print_error("Please type something or press Ctrl+C to quit.")
+
+
+def print_menu(title: str, options: Iterable[Tuple[str, str]]) -> str:
+    """
+    Show a numbered menu and return the user's selection as a string.
+
+    Args:
+        title: Heading displayed above the menu.
+        options: Iterable of (option_id, label) pairs.
+    """
+    print_heading(title)
+    for option_id, label in options:
+        print(f"{option_id}. {label}")
+    divider()
+    return ask_input("Choose an option:", allow_empty=False)
