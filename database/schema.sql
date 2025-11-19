@@ -109,3 +109,15 @@ CREATE TABLE IF NOT EXISTS search_history (
     searched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users (user_id)
 );
+
+-- Table: activity_log
+CREATE TABLE IF NOT EXISTS activity_log (
+    activity_id INT AUTO_INCREMENT PRIMARY KEY,
+    project_id INT,
+    user_id INT,
+    activity_type VARCHAR(50),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects (project_id),
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
+);
