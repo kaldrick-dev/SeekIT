@@ -1,6 +1,6 @@
 """Small helper functions for printing friendly CLI messages."""
 
-from typing import Iterable, Sequence, Tuple
+from typing import Iterable, Optional, Sequence, Tuple
 
 def divider(char: str = "-", width: int = 50) -> str:
     """Return a line divider so menus look tidy."""
@@ -43,6 +43,22 @@ def ask_input(prompt: str, allow_empty: bool = False) -> str:
         if response or allow_empty:
             return response
         print_error("Please type something or press Ctrl+C to quit.")
+
+
+def ask_int(prompt: str, allow_empty: bool = False) -> Optional[int]:
+    """
+    Ask the user for an integer value.
+
+    The helper reuses ask_input so validation is centralized in one place.
+    """
+    while True:
+        response = ask_input(prompt, allow_empty=allow_empty)
+        if allow_empty and not response:
+            return None
+        try:
+            return int(response)
+        except ValueError:
+            print_error("Please enter a whole number (e.g. 42). Try again.")
 
 
 def print_menu(title: str, options: Iterable[Tuple[str, str]]) -> str:
