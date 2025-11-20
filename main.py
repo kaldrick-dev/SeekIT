@@ -2,6 +2,7 @@
 
 from typing import Optional
 
+from features.application_manager import application_manager_menu
 from features.auth import list_users_flow, login_user_flow, register_user_flow
 from features.job_posting import job_posting_menu
 from features.job_search import job_search_menu
@@ -34,8 +35,10 @@ def main() -> None:
         print(" 3. List registered users")
         print(" 4. Log out")
         print(" 5. Search open jobs")
+        if current_user:
+            print(" 6. Application manager")
         if current_user and current_user.user_type == "client":
-            print(" 6. Job posting tools")
+            print(" 7. Job posting tools")
         print(" 0. Exit")
         divider()
 
@@ -66,6 +69,11 @@ def main() -> None:
         elif choice == "5":
             job_search_menu()
         elif choice == "6":
+            if not current_user:
+                print_info("Log in to manage applications.")
+            else:
+                application_manager_menu(current_user)
+        elif choice == "7":
             if not current_user:
                 print_info("Log in as a client to use job tools.")
             elif current_user.user_type != "client":
