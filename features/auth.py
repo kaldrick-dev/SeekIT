@@ -5,6 +5,7 @@ from typing import List, Optional
 from models.user import User, authenticate_user, list_users, register_user
 from utils.display import (
     ask_input,
+    ask_password,
     divider,
     print_error,
     print_heading,
@@ -28,7 +29,7 @@ def _collect_credentials() -> Optional[dict]:
     email = ask_input("Email address:")
     location = ask_input("Location (optional):", allow_empty=True)
     user_type = ask_input("Are you a freelancer or client?:")
-    password = ask_input("Password:")
+    password = ask_password("Password:")
 
     try:
         validate_non_empty(name, "Name")
@@ -88,7 +89,7 @@ def login_user_flow() -> Optional[User]:
     """Very small login routine."""
     print_heading("Log In")
     email = ask_input("Email address:")
-    password = ask_input("Password:")
+    password = ask_password("Password:")
 
     try:
         validate_email(email)

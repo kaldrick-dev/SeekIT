@@ -1,5 +1,6 @@
 import os
 import sys
+import getpass
 
 class Display:
     """Display utilities for consistent CLI interface"""
@@ -424,6 +425,20 @@ class Display:
             except ValueError:
                 Display.print_warning("Please enter a valid number")
 
+    @staticmethod
+    def ask_password(prompt="Password:"):
+        """
+        Get password input from user (hidden)
+
+        Args:
+            prompt: The prompt text
+
+        Returns:
+            Password as string
+        """
+        colored_prompt = Display.color_text(prompt, 'cyan', bold=True)
+        return getpass.getpass(f"{colored_prompt} ")
+
 
 # Module-level functions for backward compatibility
 def ask_input(prompt, allow_empty=False):
@@ -474,3 +489,8 @@ def print_table(headers, rows, column_widths=None):
 def print_menu(title, options, show_back=True):
     """Print a formatted menu (module-level alias)"""
     Display.print_menu(title, options, show_back)
+
+
+def ask_password(prompt="Password:"):
+    """Get password input from user (hidden) (module-level alias)"""
+    return Display.ask_password(prompt)
