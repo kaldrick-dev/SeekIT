@@ -73,9 +73,31 @@ class Application:
             return cls(**result) if result else None
 
     def accept(self):
-        """Accept application"""
+        """Accept application and auto-create workspace"""
+        from features.workspace import WorkspaceManager
+
         self.status = 'accepted'
-        return self.save()
+        self.save()
+
+        # Get job details to extract client_id
+        job = self.get_job_details()
+        if job:
+            # Auto-create workspace
+            project_id = WorkspaceManager.create_workspace(
+                application_id=self.application_id,
+                job_id=self.job_id,
+                freelancer_id=self.freelancer_id,
+                client_id=job['client_id']
+            )
+            return project_id
+
+        return self.application_id
+
+    def get_job_details(self):
+        """Get job details for this application"""
+        with DatabaseManager.get_cursor() as cursor:
+            cursor.execute("SELECT * FROM jobs WHERE job_id = %s", (self.job_id,))
+            return cursor.fetchone()
 
     def reject(self):
         """Reject application"""

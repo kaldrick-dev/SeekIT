@@ -9,4 +9,3 @@ class DatabaseConfig:
     USER = os.getenv('DB_USER','root')
     PASSWORD = os.getenv('DB_PASS','')
     DATABASE = os.getenv('DB_NAME','SeekIT')
-    
