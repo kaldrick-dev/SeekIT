@@ -81,6 +81,15 @@ class Job:
                          (self.job_id,))
             return cursor.fetchall()
 
+    def close(self):
+        """Close a job (mark as filled/closed)"""
+        if not self.job_id:
+            return False
+        with DatabaseManager.get_cursor() as cursor:
+            cursor.execute("UPDATE jobs SET status = 'closed' WHERE job_id = %s", (self.job_id,))
+            self.status = 'closed'
+            return cursor.rowcount > 0
+
     def delete(self):
         """Delete job"""
         if not self.job_id:

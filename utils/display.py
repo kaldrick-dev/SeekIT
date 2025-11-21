@@ -368,3 +368,109 @@ class Display:
         for key, value in stats.items():
             print(f"  {Display.color_text(key + ':', 'cyan', bold=True)} {value}")
         print()
+
+    @staticmethod
+    def ask_input(prompt, allow_empty=False):
+        """
+        Get user input with colored prompt
+
+        Args:
+            prompt: The prompt text
+            allow_empty: Whether to allow empty input
+
+        Returns:
+            User input as string
+        """
+        while True:
+            value = Display.get_input(prompt)
+            if value or allow_empty:
+                return value
+            Display.print_warning("This field cannot be empty. Please try again.")
+
+    @staticmethod
+    def divider(width=80, char='─'):
+        """Print a divider line"""
+        print(char * width)
+
+    @staticmethod
+    def print_heading(text, width=80):
+        """Print a formatted heading (alias for print_header)"""
+        Display.print_header(text, width=width)
+
+    @staticmethod
+    def ask_int(prompt, min_value=None, max_value=None):
+        """
+        Get integer input from user with validation
+
+        Args:
+            prompt: The prompt text
+            min_value: Optional minimum value
+            max_value: Optional maximum value
+
+        Returns:
+            Integer value
+        """
+        while True:
+            value = Display.get_input(prompt)
+            try:
+                int_value = int(value)
+                if min_value is not None and int_value < min_value:
+                    Display.print_warning(f"Value must be at least {min_value}")
+                    continue
+                if max_value is not None and int_value > max_value:
+                    Display.print_warning(f"Value must be at most {max_value}")
+                    continue
+                return int_value
+            except ValueError:
+                Display.print_warning("Please enter a valid number")
+
+
+# Module-level functions for backward compatibility
+def ask_input(prompt, allow_empty=False):
+    """Get user input with colored prompt (module-level alias)"""
+    return Display.ask_input(prompt, allow_empty)
+
+
+def divider(width=80, char='─'):
+    """Print a divider line (module-level alias)"""
+    Display.divider(width, char)
+
+
+def print_heading(text, width=80):
+    """Print a formatted heading (module-level alias)"""
+    Display.print_heading(text, width)
+
+
+def print_info(message):
+    """Print info message (module-level alias)"""
+    Display.print_info(message)
+
+
+def print_success(message):
+    """Print success message (module-level alias)"""
+    Display.print_success(message)
+
+
+def print_error(message):
+    """Print error message (module-level alias)"""
+    Display.print_error(message)
+
+
+def print_warning(message):
+    """Print warning message (module-level alias)"""
+    Display.print_warning(message)
+
+
+def ask_int(prompt, min_value=None, max_value=None):
+    """Get integer input with validation (module-level alias)"""
+    return Display.ask_int(prompt, min_value, max_value)
+
+
+def print_table(headers, rows, column_widths=None):
+    """Print data in table format (module-level alias)"""
+    Display.print_table(headers, rows, column_widths)
+
+
+def print_menu(title, options, show_back=True):
+    """Print a formatted menu (module-level alias)"""
+    Display.print_menu(title, options, show_back)

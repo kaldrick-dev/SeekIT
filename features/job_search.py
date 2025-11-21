@@ -100,11 +100,12 @@ def job_search_menu() -> None:
     """Mini loop so the feature plugs nicely into the global CLI."""
     menu_choices = [
         ("1", "Search open jobs"),
-        ("0", "Back to previous menu"),
     ]
 
     while True:
-        choice = print_menu("Job Search", menu_choices)
+        print_menu("Job Search", menu_choices)
+        choice = ask_input("Choose an option:")
+
         if choice == "1":
             search_open_jobs()
         elif choice == "0":

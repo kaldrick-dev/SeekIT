@@ -1,17 +1,12 @@
-"""SQLite-backed user model for the authentication feature."""
+"""MySQL-backed user model for the authentication feature."""
 
 from __future__ import annotations
 
-import sqlite3
-from contextlib import contextmanager
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Generator, List, Optional
+from typing import List, Optional
 
-from config.settings import DatabaseConfig
+from database.db_manager import DatabaseManager
 from utils.security import verify_password
-
-_DB_PATH = Path(DatabaseConfig.SQLITE_DB_PATH)
 
 
 @dataclass
@@ -50,25 +45,33 @@ def register_user(
 ) -> User:
     """Insert a new user row and return the created User."""
     normalized_email = email.strip().lower()
-    _ensure_database_setup()
-    with _get_connection() as conn:
-        cursor = conn.cursor()
-        try:
-            cursor.execute(
-                """
-                INSERT INTO users (name, email, password_hash, location, user_type)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (name.strip(), normalized_email, password_hash, location.strip(), user_type),
-            )
-        except sqlite3.IntegrityError as exc:
-            raise ValueError("A user with that email already exists.") from exc
 
+    with DatabaseManager.get_cursor() as cursor:
+        # Check if user already exists
+        cursor.execute(
+            "SELECT user_id FROM users WHERE LOWER(email) = %s",
+            (normalized_email,)
+        )
+        if cursor.fetchone():
+            raise ValueError("A user with that email already exists.")
+
+        # Insert new user
+        cursor.execute(
+            """
+            INSERT INTO users (name, email, password_hash, location, user_type)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (name.strip(), normalized_email, password_hash, location.strip(), user_type)
+        )
         user_id = cursor.lastrowid
+
+        # Add skills if freelancer
         if user_type == "freelancer" and skills:
             _replace_skills(cursor, user_id, skills)
 
-        row = _fetch_user_row(cursor, user_id)
+        # Fetch the created user
+        cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+        row = cursor.fetchone()
         return _build_user(cursor, row)
 
 
@@ -84,13 +87,12 @@ def authenticate_user(email: str, password: str) -> Optional[User]:
 
 def get_user_by_email(email: str) -> Optional[User]:
     """Return a user by email if it exists."""
-    _ensure_database_setup()
     normalized = email.strip().lower()
-    with _get_connection() as conn:
-        cursor = conn.cursor()
+
+    with DatabaseManager.get_cursor() as cursor:
         cursor.execute(
-            "SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1",
-            (normalized,),
+            "SELECT * FROM users WHERE LOWER(email) = %s LIMIT 1",
+            (normalized,)
         )
         row = cursor.fetchone()
         return _build_user(cursor, row) if row else None
@@ -98,16 +100,36 @@ def get_user_by_email(email: str) -> Optional[User]:
 
 def list_users(user_type: Optional[str] = None) -> List[User]:
     """Return all registered users, optionally filtered by role."""
-    _ensure_database_setup()
-    with _get_connection() as conn:
-        cursor = conn.cursor()
+    with DatabaseManager.get_cursor() as cursor:
         if user_type:
             cursor.execute(
-                "SELECT * FROM users WHERE user_type = ? ORDER BY created_at DESC",
-                (user_type.lower(),),
+                "SELECT * FROM users WHERE user_type = %s ORDER BY created_at DESC",
+                (user_type.lower(),)
             )
         else:
             cursor.execute("SELECT * FROM users ORDER BY created_at DESC")
+
+        rows = cursor.fetchall()
+        return [_build_user(cursor, row) for row in rows]
+
+
+def find_freelancers_by_skills(required_skills: List[str]) -> List[User]:
+    """Find freelancers that match any of the required skills."""
+    if not required_skills:
+        return list_users("freelancer")
+
+    with DatabaseManager.get_cursor() as cursor:
+        # Build a query to find freelancers with matching skills
+        placeholders = ", ".join(["%s"] * len(required_skills))
+        query = f"""
+            SELECT DISTINCT u.*
+            FROM users u
+            INNER JOIN freelancer_skills fs ON u.user_id = fs.user_id
+            WHERE u.user_type = 'freelancer'
+            AND fs.skill_name IN ({placeholders})
+            ORDER BY u.created_at DESC
+        """
+        cursor.execute(query, tuple(required_skills))
         rows = cursor.fetchall()
         return [_build_user(cursor, row) for row in rows]
 
@@ -117,56 +139,13 @@ def list_users(user_type: Optional[str] = None) -> List[User]:
 # --------------------------------------------------------------------------- #
 
 
-def _ensure_database_setup() -> None:
-    """Make sure the SQLite file and tables exist."""
-    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(_DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                email TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL,
-                location TEXT,
-                user_type TEXT NOT NULL CHECK(user_type IN ('freelancer', 'client')),
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        )
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS freelancer_skills (
-                skill_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                skill_name TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
-            )
-            """
-        )
-
-
-@contextmanager
-def _get_connection() -> Generator[sqlite3.Connection, None, None]:
-    """Context manager that handles commits and rollbacks."""
-    conn = sqlite3.connect(_DB_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-        conn.commit()
-    except sqlite3.Error:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
-
-
-def _build_user(cursor: sqlite3.Cursor, row: sqlite3.Row) -> User:
-    """Convert a sqlite row plus related skills to a User dataclass."""
+def _build_user(cursor, row) -> User:
+    """Convert a database row plus related skills to a User dataclass."""
     if row is None:
         raise ValueError("Cannot build a user from an empty row.")
+
     skills = _fetch_skills(cursor, row["user_id"])
+
     return User(
         user_id=row["user_id"],
         name=row["name"],
@@ -174,30 +153,27 @@ def _build_user(cursor: sqlite3.Cursor, row: sqlite3.Row) -> User:
         password_hash=row["password_hash"],
         location=row["location"] or "",
         user_type=row["user_type"],
-        created_at=row["created_at"] or "",
+        created_at=str(row["created_at"]) if row["created_at"] else "",
         skills=skills,
     )
 
 
-def _fetch_user_row(cursor: sqlite3.Cursor, user_id: int) -> sqlite3.Row:
-    cursor.execute("SELECT * FROM users WHERE user_id = ? LIMIT 1", (user_id,))
-    row = cursor.fetchone()
-    if not row:
-        raise LookupError("User could not be found after creation.")
-    return row
-
-
-def _fetch_skills(cursor: sqlite3.Cursor, user_id: int) -> List[str]:
+def _fetch_skills(cursor, user_id: int) -> List[str]:
+    """Fetch skills for a user."""
     cursor.execute(
-        "SELECT skill_name FROM freelancer_skills WHERE user_id = ? ORDER BY skill_name ASC",
-        (user_id,),
+        "SELECT skill_name FROM freelancer_skills WHERE user_id = %s ORDER BY skill_name ASC",
+        (user_id,)
     )
     return [record["skill_name"] for record in cursor.fetchall()]
 
 
-def _replace_skills(cursor: sqlite3.Cursor, user_id: int, skills: List[str]) -> None:
-    cursor.execute("DELETE FROM freelancer_skills WHERE user_id = ?", (user_id,))
-    cursor.executemany(
-        "INSERT INTO freelancer_skills (user_id, skill_name) VALUES (?, ?)",
-        [(user_id, skill.strip()) for skill in skills if skill.strip()],
-    )
+def _replace_skills(cursor, user_id: int, skills: List[str]) -> None:
+    """Replace all skills for a user."""
+    cursor.execute("DELETE FROM freelancer_skills WHERE user_id = %s", (user_id,))
+
+    for skill in skills:
+        if skill.strip():
+            cursor.execute(
+                "INSERT INTO freelancer_skills (user_id, skill_name) VALUES (%s, %s)",
+                (user_id, skill.strip())
+            )

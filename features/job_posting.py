@@ -148,11 +148,11 @@ def job_posting_menu(current_user):
     menu_choices = [
         ("1", "Post a new job"),
         ("2", "View my jobs"),
-        ("0", "Back to previous menu"),
     ]
 
     while True:
-        choice = print_menu("Job Posting Menu", menu_choices)
+        print_menu("Job Posting Menu", menu_choices)
+        choice = ask_input("Choose an option:")
 
         if choice == "1":
             post_new_job(current_user)
