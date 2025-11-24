@@ -230,8 +230,22 @@ def _client_menu(user) -> None:
             records = application_manager.list_for_job(job_id)
             _show_table(records, "No one has applied to this job yet.")
         elif choice in {"2", "3"}:
-            
-            application_id = ask_int("Application ID to update:")
+            # First, show all applications for the client's jobs
+            records = application_manager.list_for_client(user.user_id)
+            if not records:
+                print_info("No applications found for your jobs.")
+                continue
+
+            # Filter to show only pending applications for accept/reject
+            pending_records = [r for r in records if r.status == "pending"]
+            if not pending_records:
+                print_info("No pending applications to update.")
+                continue
+
+            print_info(f"\nPending applications for your jobs:")
+            _show_table(pending_records, "No pending applications.")
+
+            application_id = ask_int("\nApplication ID to update:")
             if application_id is None:
                 print_error("Application ID is required.")
                 continue
